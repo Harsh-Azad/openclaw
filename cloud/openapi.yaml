@@ -1,0 +1,434 @@
+openapi: 3.1.0
+info:
+  title: Jarvis Tax Assistant API
+  description: |
+    AI-powered tax and compliance assistant API for Indian tax professionals.
+    Covers GST, Income Tax, Customs, Company Law, and FEMA.
+    
+    **Authentication**: Bearer JWT token or X-API-Key header.
+    **License**: AGPL-3.0 (open source) / Commercial (enterprise features).
+  version: 1.0.0
+  contact:
+    email: api@jarvis-tax.ai
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+
+servers:
+  - url: http://localhost:3001
+    description: Development server
+
+tags:
+  - name: Auth
+    description: Authentication and user management
+  - name: Tax
+    description: Tax consultation, document analysis, compliance, and tariff lookup
+  - name: Subscription
+    description: Subscription and usage management
+  - name: Upload
+    description: File upload and data ingestion
+  - name: Enterprise
+    description: Enterprise features (RBAC, Audit, SSO)
+  - name: Plugins
+    description: Plugin management
+  - name: API Keys
+    description: API key management
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  service: { type: string, example: jarvis-tax-assistant }
+                  version: { type: string, example: 1.0.0 }
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name, profession]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                name: { type: string }
+                profession: { type: string, enum: [ca, lawyer, tax-consultant, cs, cma, other] }
+                firm: { type: string }
+                phone: { type: string }
+      responses:
+        '201':
+          description: Registration successful
+        '409':
+          description: Email already registered
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Login successful, returns tokens
+        '401':
+          description: Invalid credentials
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: User profile
+
+  /api/v1/tax/chat:
+    post:
+      tags: [Tax]
+      summary: Ask a tax question
+      security: [{ bearerAuth: [] }, { apiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query: { type: string, maxLength: 2000, example: "What is the GST rate for IT services?" }
+                domain: { type: string, enum: [gst, income-tax, customs, company-law, fema, general], default: general }
+                context: { type: array, items: { type: object, properties: { role: { type: string }, content: { type: string } } } }
+                sessionId: { type: string }
+      responses:
+        '200':
+          description: Tax answer with citations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer: { type: string }
+                  references: { type: array, items: { type: object, properties: { type: { type: string }, title: { type: string }, citation: { type: string } } } }
+                  confidence: { type: number }
+                  domain: { type: string }
+        '429':
+          description: Daily query limit reached
+
+  /api/v1/tax/compliance-calendar:
+    get:
+      tags: [Tax]
+      summary: Get compliance deadlines
+      security: [{ bearerAuth: [] }, { apiKeyAuth: [] }]
+      parameters:
+        - name: month
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 12 }
+        - name: year
+          in: query
+          schema: { type: integer }
+        - name: category
+          in: query
+          schema: { type: string, enum: [gst, income-tax, tds, company-law, fema] }
+      responses:
+        '200':
+          description: List of compliance deadlines
+
+  /api/v1/tax/tariff-lookup:
+    get:
+      tags: [Tax]
+      summary: Look up customs tariff rates
+      security: [{ bearerAuth: [] }, { apiKeyAuth: [] }]
+      parameters:
+        - name: hsn
+          in: query
+          schema: { type: string }
+          description: HSN code prefix
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Description keyword search
+        - name: chapter
+          in: query
+          schema: { type: string }
+          description: Chapter name/number
+      responses:
+        '200':
+          description: Tariff lookup results
+
+  /api/v1/tax/analyze-document:
+    post:
+      tags: [Tax]
+      summary: Analyze a tax document
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, fileType]
+              properties:
+                action: { type: string, enum: [analyze, compare, extract, validate] }
+                fileType: { type: string, enum: [excel, pdf, word, csv] }
+                analysisType: { type: string }
+      responses:
+        '200':
+          description: Analysis results
+        '403':
+          description: Feature not available on current plan
+
+  /api/v1/upload/tariff-data:
+    post:
+      tags: [Upload]
+      summary: Upload customs tariff Excel data
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+                sheet: { type: string }
+                year: { type: integer }
+      responses:
+        '200':
+          description: Tariff data loaded successfully
+
+  /api/v1/upload/tariff-search:
+    get:
+      tags: [Upload]
+      summary: Search loaded tariff data
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: hsn
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: chapter
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        '200':
+          description: Search results
+
+  /api/v1/subscription/plans:
+    get:
+      tags: [Subscription]
+      summary: List available plans
+      responses:
+        '200':
+          description: List of subscription plans with pricing
+
+  /api/v1/subscription/current:
+    get:
+      tags: [Subscription]
+      summary: Get current subscription
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Current subscription details
+
+  /api/v1/subscription/usage:
+    get:
+      tags: [Subscription]
+      summary: Get usage statistics
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Usage stats for today
+
+  /api/v1/api-keys:
+    get:
+      tags: [API Keys]
+      summary: List API keys
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: List of API keys
+    post:
+      tags: [API Keys]
+      summary: Create API key
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                permissions: { type: array, items: { type: string } }
+                rateLimitPerMin: { type: integer, default: 100 }
+                expiresInDays: { type: integer }
+      responses:
+        '201':
+          description: API key created (shown only once)
+
+  /api/v1/plugins:
+    get:
+      tags: [Plugins]
+      summary: List installed plugins
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: List of plugins
+
+  /api/v1/enterprise/audit-logs:
+    get:
+      tags: [Enterprise]
+      summary: Query audit logs
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
+        - name: action
+          in: query
+          schema: { type: string }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100 }
+      responses:
+        '200':
+          description: Audit log entries
+
+  /api/v1/enterprise/roles:
+    get:
+      tags: [Enterprise]
+      summary: List RBAC roles and permissions
+      responses:
+        '200':
+          description: All roles with their permissions
+
+  /api/v1/enterprise/license:
+    get:
+      tags: [Enterprise]
+      summary: Get license information
+      responses:
+        '200':
+          description: Current license details and feature flags
+
+  /api/v1/rag/stats:
+    get:
+      summary: RAG pipeline statistics
+      tags: [RAG]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Document count, chunk count, vector DB type
+
+  /api/v1/rag/ingest:
+    post:
+      summary: Ingest a document into the RAG pipeline
+      tags: [RAG]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, title, content]
+              properties:
+                id:
+                  type: string
+                source:
+                  type: string
+                  enum: [notification, circular, case-law, act, rule, article]
+                domain:
+                  type: string
+                title:
+                  type: string
+                content:
+                  type: string
+                citation:
+                  type: string
+                effectiveDate:
+                  type: string
+                url:
+                  type: string
+      responses:
+        "200":
+          description: Number of chunks ingested
+
+  /api/v1/rag/search:
+    get:
+      summary: Search ingested documents
+      tags: [RAG]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: domain
+          in: query
+          schema:
+            type: string
+        - name: topK
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: Search results with relevance scores
+
+  /api/v1/subscription/webhook/razorpay:
+    post:
+      summary: Razorpay payment webhook
+      tags: [Subscription]
+      description: Called by Razorpay on payment events. Verified via X-Razorpay-Signature header.
+      parameters:
+        - name: X-Razorpay-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Webhook processed
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key

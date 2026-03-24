@@ -1,0 +1,8 @@
+[DB] Using SQLite (development mode)
+[PluginRegistry] Registered: Transfer Pricing Module v1.0.0
+[Plugin] Transfer Pricing plugin initialized
+[PluginRegistry] Initialized: Transfer Pricing Module
+[Jarvis Cloud] Plugins loaded: 1
+[Jarvis Cloud] Server running on port 3001 
+[Jarvis Cloud] License: AGPL-3.0 / Commercial
+[Jarvis Cloud] API: http://localhost:3001 /api/health

@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jarvis - AI Tax Assistant</title>
+  <style>
+    :root {
+      --primary: #1a56db;
+      --primary-dark: #1e40af;
+      --primary-light: #dbeafe;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --accent: #7c3aed;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .header h1 span { font-weight: 300; opacity: 0.85; font-size: 14px; margin-left: 8px; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .user-badge {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+    }
+    .btn-logout {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,0.25); }
+
+    /* Layout */
+    .app-layout { display: flex; min-height: calc(100vh - 60px); }
+    .sidebar {
+      width: 220px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+    }
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .sidebar a .icon { font-size: 18px; width: 22px; text-align: center; }
+    .main-content { flex: 1; padding: 24px; max-width: 1100px; }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .card h2 { font-size: 18px; margin-bottom: 16px; color: var(--text); }
+    .card h3 { font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
+
+    /* Stats row */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+    }
+    .stat-card .stat-value { font-size: 28px; font-weight: 700; color: var(--primary); }
+    .stat-card .stat-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Forms */
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border 0.15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+    label { font-size: 13px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px; }
+    .form-group { margin-bottom: 14px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    .btn-outline:hover { background: var(--primary-light); }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+    /* Chat */
+    .chat-container { display: flex; flex-direction: column; height: 500px; }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .chat-msg { margin-bottom: 14px; max-width: 85%; }
+    .chat-msg.user { margin-left: auto; text-align: right; }
+    .chat-msg .bubble {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      text-align: left;
+      white-space: pre-wrap;
+    }
+    .chat-msg.user .bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+    .chat-msg.assistant .bubble { background: white; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .chat-msg .domain-tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--primary-light);
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .chat-input-row { display: flex; gap: 10px; }
+    .chat-input-row input { flex: 1; }
+    .chat-input-row select { width: 140px; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8fafc; font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    tr:hover { background: #f8fafc; }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-high { background: #fef2f2; color: var(--danger); }
+    .badge-medium { background: #fffbeb; color: var(--warning); }
+    .badge-low { background: #f0fdf4; color: var(--success); }
+    .badge-overdue { background: var(--danger); color: white; }
+    .badge-upcoming { background: var(--success); color: white; }
+
+    /* Auth screens */
+    .auth-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    }
+    .auth-card {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .auth-card h1 { text-align: center; font-size: 28px; margin-bottom: 6px; }
+    .auth-card p { text-align: center; color: var(--text-muted); margin-bottom: 24px; font-size: 14px; }
+    .auth-card .btn { width: 100%; justify-content: center; margin-top: 8px; }
+    .auth-toggle { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-muted); }
+    .auth-toggle a { color: var(--primary); cursor: pointer; text-decoration: underline; }
+    .auth-error { color: var(--danger); font-size: 13px; text-align: center; margin-top: 8px; }
+
+    /* Loading */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Tariff search */
+    .search-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .search-row input { flex: 1; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* Hide sections */
+    .page { display: none; }
+    .page.active { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-card">
+    <div style="text-align:center;margin-bottom:8px;">
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:linear-gradient(135deg,#1a56db,#7c3aed);border-radius:14px;margin-bottom:12px;">
+        <span style="color:white;font-size:28px;font-weight:800;">J</span>
+      </div>
+    </div>
+    <h1>JARVIS</h1>
+    <p style="font-size:15px;color:var(--text-muted);margin-bottom:8px;">Enterprise AI Tax Assistant</p>
+    <p style="font-size:12px;color:#94a3b8;margin-bottom:24px;">16,885 Tariff Entries | 13 Tax Knowledge Topics | 19 Agent Tools | 5 Tax Domains</p>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="you@firm.com" value="">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Min 8 characters" value="">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+      <div id="login-error" class="auth-error"></div>
+      <div class="auth-toggle">Don't have an account? <a onclick="showRegister()">Register</a></div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-form" style="display:none;">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Your name">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="you@firm.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Min 8 characters">
+      </div>
+      <div class="form-group">
+        <label>Profession</label>
+        <select id="reg-profession">
+          <option value="ca">Chartered Accountant</option>
+          <option value="lawyer">Lawyer / Advocate</option>
+          <option value="cs">Company Secretary</option>
+          <option value="cma">Cost & Management Accountant</option>
+          <option value="tax-consultant">Tax Consultant</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Firm (optional)</label>
+        <input type="text" id="reg-firm" placeholder="Your firm name">
+      </div>
+      <button class="btn btn-primary" onclick="doRegister()">Create Account</button>
+      <div id="reg-error" class="auth-error"></div>
+      <div class="auth-toggle">Already have an account? <a onclick="showLogin()">Sign In</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-screen" style="display:none;">
+  <div class="header">
+    <h1 style="display:flex;align-items:center;gap:10px;"><div style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;"><span style="font-weight:800;font-size:18px;">J</span></div> JARVIS <span>Enterprise AI Tax Assistant</span></h1>
+    <div class="header-right">
+      <span class="user-badge" id="user-badge"></span>
+      <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <div class="sidebar">
+      <a class="active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="icon">&#9733;</span> Dashboard
+      </a>
+      <a onclick="showPage('tax-chat')" id="nav-tax-chat">
+        <span class="icon">&#128172;</span> Tax Chat
+      </a>
+      <a onclick="showPage('compliance')" id="nav-compliance">
+        <span class="icon">&#128197;</span> Compliance
+      </a>
+      <a onclick="showPage('tariff')" id="nav-tariff">
+        <span class="icon">&#128269;</span> Customs Tariff
+      </a>
+      <a onclick="showPage('subscription')" id="nav-subscription">
+        <span class="icon">&#128176;</span> Subscription
+      </a>
+      <a onclick="showPage('plugins')" id="nav-plugins">
+        <span class="icon">&#128268;</span> Plugins
+      </a>
+    </div>
+
+    <div class="main-content">
+
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page active">
+        <h2 style="margin-bottom:20px;">Welcome back, <span id="dash-name"></span></h2>
+        <div class="stats-row" id="dash-stats"></div>
+        <div class="stats-row" id="dash-system-stats"></div>
+        <div class="card">
+          <h2>Upcoming Deadlines</h2>
+          <div id="dash-deadlines">Loading...</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="card">
+            <h2>System Status</h2>
+            <div id="dash-health">Checking...</div>
+          </div>
+          <div class="card">
+            <h2>Quick Actions</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+              <button class="btn btn-primary" onclick="showPage('tax-chat')" style="font-size:13px;">Ask Tax Question</button>
+              <button class="btn" onclick="showPage('compliance')" style="font-size:13px;background:var(--success);color:white;border:none;">Compliance Calendar</button>
+              <button class="btn" onclick="showPage('tariff')" style="font-size:13px;background:var(--accent);color:white;border:none;">Search Tariff</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <h2>Built-in Knowledge Base</h2>
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">Jarvis has built-in expertise in these areas (no LLM API key needed):</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;" id="dash-kb">
+            <div style="background:var(--primary-light);padding:10px;border-radius:8px;font-size:13px;"><strong>TDS Rates</strong><br>All sections 192-194S with thresholds</div>
+            <div style="background:#fef3c7;padding:10px;border-radius:8px;font-size:13px;"><strong>GST</strong><br>Registration, returns, ITC, composition</div>
+            <div style="background:#e0e7ff;padding:10px;border-radius:8px;font-size:13px;"><strong>Income Tax</strong><br>Sections, deductions (80C-80U), new regime</div>
+            <div style="background:#dcfce7;padding:10px;border-radius:8px;font-size:13px;"><strong>Customs</strong><br>Duty calculation, FTAs, procedures</div>
+            <div style="background:#fce7f3;padding:10px;border-radius:8px;font-size:13px;"><strong>Company Law</strong><br>AGM, filing, CSR, RPT, penalties</div>
+            <div style="background:#f0fdf4;padding:10px;border-radius:8px;font-size:13px;"><strong>FEMA</strong><br>LRS, FDI, ECB, ODI compliance</div>
+            <div style="background:#fff7ed;padding:10px;border-radius:8px;font-size:13px;"><strong>Advance Tax</strong><br>Due dates, interest calculation</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAX CHAT -->
+      <div id="page-tax-chat" class="page">
+        <div class="card">
+          <h2>Tax Chat</h2>
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:8px;">
+            Ask any question about Indian tax law. Covers GST, Income Tax, Customs, Company Law, and FEMA.
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;" id="chat-suggestions">
+            <button onclick="askSuggestion('What is TDS rate on rent payment?')" style="background:var(--primary-light);color:var(--primary);border:none;padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;">TDS on Rent</button>
+            <button onclick="askSuggestion('Capital gains tax on shares LTCG STCG')" style="background:#fef3c7;color:#d97706;border:none;padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;">Capital Gains</button>
+            <button onclick="askSuggestion('Section 80C deduction investments')" style="background:#e0e7ff;color:#4338ca;border:none;padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;">80C Deductions</button>
+            <button onclick="askSuggestion('GST return due dates GSTR-1 GSTR-3B')" style="background:#dcfce7;color:#16a34a;border:none;padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;">GST Returns</button>
+            <button onclick="askSuggestion('TDS on salary section 192')" style="background:#fce7f3;color:#be185d;border:none;padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;">Salary TDS</button>
+            <button onclick="askSuggestion('TDS on contractor payment 194C')" style="background:#fff7ed;color:#c2410c;border:none;padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;">Contractor TDS</button>
+            <button onclick="askSuggestion('Advance tax due dates and interest')" style="background:#f0fdf4;color:#166534;border:none;padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;">Advance Tax</button>
+          </div>
+          <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+              <div class="chat-msg assistant">
+                <div class="bubble">Hello! I am Jarvis, your AI tax assistant. Ask me anything about Indian tax law -- GST, Income Tax, Customs, Company Law, or FEMA. I will provide answers with legal citations.</div>
+              </div>
+            </div>
+            <div class="chat-input-row">
+              <select id="chat-domain">
+                <option value="general">All Domains</option>
+                <option value="gst">GST</option>
+                <option value="income-tax">Income Tax</option>
+                <option value="customs">Customs</option>
+                <option value="company-law">Company Law</option>
+                <option value="fema">FEMA</option>
+              </select>
+              <input type="text" id="chat-input" placeholder="Ask a tax question..." onkeydown="if(event.key==='Enter')sendChat()">
+              <button class="btn btn-primary" onclick="sendChat()" id="btn-send">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPLIANCE CALENDAR -->
+      <div id="page-compliance" class="page">
+        <div class="card">
+          <h2>Compliance Calendar</h2>
+          <div style="display:flex;gap:10px;margin-bottom:16px;">
+            <select id="comp-month" onchange="loadCompliance()" style="width:140px;">
+              <option value="1">January</option><option value="2">February</option>
+              <option value="3">March</option><option value="4">April</option>
+              <option value="5">May</option><option value="6">June</option>
+              <option value="7">July</option><option value="8">August</option>
+              <option value="9">September</option><option value="10">October</option>
+              <option value="11">November</option><option value="12">December</option>
+            </select>
+            <select id="comp-year" onchange="loadCompliance()" style="width:100px;">
+              <option value="2026">2026</option><option value="2025">2025</option>
+            </select>
+            <select id="comp-category" onchange="loadCompliance()" style="width:160px;">
+              <option value="">All Categories</option>
+              <option value="gst">GST</option>
+              <option value="income-tax">Income Tax</option>
+              <option value="tds">TDS/TCS</option>
+              <option value="company-law">Company Law</option>
+              <option value="fema">FEMA</option>
+            </select>
+          </div>
+          <div id="compliance-table">Loading...</div>
+        </div>
+      </div>
+
+      <!-- TARIFF LOOKUP -->
+      <div id="page-tariff" class="page">
+        <div class="card">
+          <h2>Customs Tariff Lookup</h2>
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px;">
+            Search India's Customs Tariff (16,885 entries loaded). Search by HSN code, description, or chapter.
+          </p>
+          <div class="search-row">
+            <input type="text" id="tariff-query" placeholder="Enter HSN code or keyword (e.g. 8471, laptop, Chapter 84)..." onkeydown="if(event.key==='Enter')searchTariff()">
+            <select id="tariff-type" style="width:150px;">
+              <option value="search">By Keyword</option>
+              <option value="hsn">By HSN Code</option>
+              <option value="chapter">By Chapter</option>
+            </select>
+            <button class="btn btn-primary" onclick="searchTariff()">Search</button>
+          </div>
+          <div id="tariff-stats" style="margin-bottom:12px;font-size:13px;color:var(--text-muted);"></div>
+          <div id="tariff-results"></div>
+        </div>
+      </div>
+
+      <!-- SUBSCRIPTION -->
+      <div id="page-subscription" class="page">
+        <div class="card">
+          <h2>Your Subscription</h2>
+          <div id="sub-current">Loading...</div>
+        </div>
+        <div class="card">
+          <h2>Available Plans</h2>
+          <div id="sub-plans">Loading...</div>
+        </div>
+        <div class="card">
+          <h2>Today's Usage</h2>
+          <div id="sub-usage">Loading...</div>
+        </div>
+      </div>
+
+      <!-- PLUGINS -->
+      <div id="page-plugins" class="page">
+        <div class="card">
+          <h2>Installed Plugins</h2>
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px;">
+            Enterprise plugins extend Jarvis with domain-specific tax capabilities.
+          </p>
+          <div id="plugins-list">Loading...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+let token = localStorage.getItem('jarvis_token');
+let currentUser = null;
+
+// --- AUTH ---
+function showRegister() {
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('register-form').style.display = 'block';
+}
+function showLogin() {
+  document.getElementById('login-form').style.display = 'block';
+  document.getElementById('register-form').style.display = 'none';
+}
+
+async function doRegister() {
+  const body = {
+    name: document.getElementById('reg-name').value,
+    email: document.getElementById('reg-email').value,
+    password: document.getElementById('reg-password').value,
+    profession: document.getElementById('reg-profession').value,
+    firm: document.getElementById('reg-firm').value || undefined,
+  };
+  try {
+    const res = await fetch(API + '/api/v1/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) { document.getElementById('reg-error').textContent = data.error || 'Registration failed'; return; }
+    token = data.accessToken;
+    localStorage.setItem('jarvis_token', token);
+    currentUser = data.user;
+    enterApp();
+  } catch (e) { document.getElementById('reg-error').textContent = 'Network error'; }
+}
+
+async function doLogin() {
+  const body = {
+    email: document.getElementById('login-email').value,
+    password: document.getElementById('login-password').value,
+  };
+  try {
+    const res = await fetch(API + '/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) { document.getElementById('login-error').textContent = data.error || 'Login failed'; return; }
+    token = data.accessToken;
+    localStorage.setItem('jarvis_token', token);
+    currentUser = data.user;
+    enterApp();
+  } catch (e) { document.getElementById('login-error').textContent = 'Network error'; }
+}
+
+function doLogout() {
+  token = null;
+  currentUser = null;
+  localStorage.removeItem('jarvis_token');
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  return { status: res.status, data: await res.json() };
+}
+
+// --- APP ENTRY ---
+async function enterApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+
+  if (!currentUser) {
+    try {
+      const { status, data } = await api('GET', '/api/v1/auth/me');
+      if (status === 200) { currentUser = data.user; }
+      else { doLogout(); return; }
+    } catch { doLogout(); return; }
+  }
+
+  document.getElementById('user-badge').textContent = currentUser.name + ' (' + currentUser.tier + ')';
+  document.getElementById('dash-name').textContent = currentUser.name;
+  document.getElementById('comp-month').value = new Date().getMonth() + 1;
+
+  loadDashboard();
+}
+
+// --- NAVIGATION ---
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + pageId).classList.add('active');
+  document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+  document.getElementById('nav-' + pageId).classList.add('active');
+
+  if (pageId === 'compliance') loadCompliance();
+  if (pageId === 'tariff') loadTariffStats();
+  if (pageId === 'subscription') loadSubscription();
+  if (pageId === 'plugins') loadPlugins();
+}
+
+// --- DASHBOARD ---
+async function loadDashboard() {
+  // Health
+  try {
+    const { data } = await api('GET', '/api/health');
+    document.getElementById('dash-health').innerHTML =
+      '<span style="color:var(--success);font-weight:600;">&#10003; Online</span> &mdash; ' +
+      data.service + ' v' + data.version + ' (' + data.license + ')';
+  } catch { document.getElementById('dash-health').textContent = 'Error connecting'; }
+
+  // Usage
+  try {
+    const { data } = await api('GET', '/api/v1/subscription/usage');
+    document.getElementById('dash-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-value">${data.queries?.used || 0}</div><div class="stat-label">Queries Today</div></div>
+      <div class="stat-card"><div class="stat-value">${data.queries?.limit === -1 ? '&infin;' : data.queries?.limit || 10}</div><div class="stat-label">Query Limit</div></div>
+      <div class="stat-card"><div class="stat-value">${data.documents?.used || 0}</div><div class="stat-label">Docs Analyzed</div></div>
+      <div class="stat-card"><div class="stat-value">${(currentUser?.tier || 'free').toUpperCase()}</div><div class="stat-label">Current Plan</div></div>
+    `;
+  } catch { document.getElementById('dash-stats').innerHTML = '<p>Could not load stats</p>'; }
+
+  // System stats (tariff, tools, etc.)
+  try {
+    const { data: tariff } = await api('GET', '/api/v1/tax/tariff-stats');
+    document.getElementById('dash-system-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-value">${(tariff.totalEntries || 0).toLocaleString()}</div><div class="stat-label">Tariff Entries</div></div>
+      <div class="stat-card"><div class="stat-value">${tariff.chapters || 0}</div><div class="stat-label">HS Chapters</div></div>
+      <div class="stat-card"><div class="stat-value">19</div><div class="stat-label">Agent Tools</div></div>
+      <div class="stat-card"><div class="stat-value">7</div><div class="stat-label">Tax Domains</div></div>
+    `;
+  } catch { document.getElementById('dash-system-stats').innerHTML = ''; }
+
+  // Deadlines
+  try {
+    const month = new Date().getMonth() + 1;
+    const year = new Date().getFullYear();
+    const { data } = await api('GET', `/api/v1/tax/compliance-calendar?month=${month}&year=${year}`);
+    if (data.deadlines && data.deadlines.length > 0) {
+      const rows = data.deadlines.slice(0, 6).map(d =>
+        `<tr>
+          <td><strong>${d.name}</strong></td>
+          <td>${d.form}</td>
+          <td>${d.dueDate}</td>
+          <td><span class="badge badge-${d.priority}">${d.priority}</span></td>
+          <td><span class="badge badge-${d.status}">${d.status}</span></td>
+        </tr>`
+      ).join('');
+      document.getElementById('dash-deadlines').innerHTML =
+        `<table><thead><tr><th>Deadline</th><th>Form</th><th>Due Date</th><th>Priority</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } else {
+      document.getElementById('dash-deadlines').textContent = 'No deadlines this month.';
+    }
+  } catch { document.getElementById('dash-deadlines').textContent = 'Error loading deadlines'; }
+}
+
+// --- TAX CHAT ---
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const domain = document.getElementById('chat-domain').value;
+  const query = input.value.trim();
+  if (!query) return;
+
+  const msgs = document.getElementById('chat-messages');
+  msgs.innerHTML += `<div class="chat-msg user"><div class="bubble">${escHtml(query)}</div></div>`;
+  input.value = '';
+  msgs.scrollTop = msgs.scrollHeight;
+
+  document.getElementById('btn-send').disabled = true;
+  document.getElementById('btn-send').innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const { status, data } = await api('POST', '/api/v1/tax/chat', { query, domain });
+    let reply = '';
+    if (status === 429) {
+      reply = 'Daily query limit reached. Please upgrade your plan.';
+    } else if (data.answer) {
+      reply = data.answer;
+      if (data.references && data.references.length > 0) {
+        reply += '\n\n--- References ---';
+        data.references.forEach(r => { reply += '\n' + (r.citation || r.title || r.type); });
+      }
+    } else if (data.message) {
+      reply = data.message;
+    } else {
+      reply = JSON.stringify(data, null, 2);
+    }
+
+    const domainTag = domain !== 'general' ? `<div class="domain-tag">${domain.toUpperCase()}</div>` : '';
+    const confTag = data.confidence ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Confidence: ${(data.confidence * 100).toFixed(0)}%</div>` : '';
+    const refTag = data.references && data.references.length > 0
+      ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);">References: ${data.references.map(r => '<span style="background:#f1f5f9;padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;">' + escHtml(r.citation || r.title) + '</span>').join(' ')}</div>` : '';
+    msgs.innerHTML += `<div class="chat-msg assistant">${domainTag}<div class="bubble">${renderMarkdown(reply)}${refTag}${confTag}</div></div>`;
+  } catch {
+    msgs.innerHTML += `<div class="chat-msg assistant"><div class="bubble" style="color:var(--danger);">Error: Could not reach the server.</div></div>`;
+  }
+
+  document.getElementById('btn-send').disabled = false;
+  document.getElementById('btn-send').textContent = 'Send';
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// --- COMPLIANCE ---
+async function loadCompliance() {
+  const month = document.getElementById('comp-month').value;
+  const year = document.getElementById('comp-year').value;
+  const category = document.getElementById('comp-category').value;
+  document.getElementById('compliance-table').innerHTML = 'Loading...';
+
+  try {
+    let url = `/api/v1/tax/compliance-calendar?month=${month}&year=${year}`;
+    if (category) url += `&category=${category}`;
+    const { data } = await api('GET', url);
+    if (data.deadlines && data.deadlines.length > 0) {
+      const rows = data.deadlines.map(d => `
+        <tr>
+          <td><span class="badge badge-${d.priority}">${d.priority}</span></td>
+          <td><strong>${d.name}</strong><br><small style="color:var(--text-muted)">${d.description}</small></td>
+          <td>${d.form}</td>
+          <td>${d.category.toUpperCase()}</td>
+          <td>${d.dueDate}${d.extended ? '<br><small style="color:var(--warning)">Extended (' + d.extensionNotification + ')</small>' : ''}</td>
+          <td><span class="badge badge-${d.status}">${d.status}</span></td>
+          <td><small>${d.penalty}</small></td>
+        </tr>
+      `).join('');
+      document.getElementById('compliance-table').innerHTML =
+        `<p style="margin-bottom:10px;font-size:13px;color:var(--text-muted);">${data.count} deadlines found</p>
+        <table><thead><tr><th>Priority</th><th>Deadline</th><th>Form</th><th>Category</th><th>Due Date</th><th>Status</th><th>Penalty</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } else {
+      document.getElementById('compliance-table').textContent = 'No deadlines for this period.';
+    }
+  } catch { document.getElementById('compliance-table').textContent = 'Error loading compliance data.'; }
+}
+
+// --- TARIFF ---
+async function loadTariffStats() {
+  try {
+    const { data } = await api('GET', '/api/v1/tax/tariff-stats');
+    if (data.totalEntries) {
+      document.getElementById('tariff-stats').innerHTML =
+        `<div style="display:flex;gap:16px;padding:12px;background:var(--primary-light);border-radius:8px;">
+          <div><strong style="font-size:20px;color:var(--primary);">${Number(data.totalEntries).toLocaleString()}</strong><br><span style="font-size:11px;">Tariff Entries</span></div>
+          <div><strong style="font-size:20px;color:var(--primary);">${data.chapters}</strong><br><span style="font-size:11px;">HS Chapters</span></div>
+          <div><strong style="font-size:20px;color:var(--primary);">${data.year}</strong><br><span style="font-size:11px;">Tariff Year</span></div>
+        </div>`;
+    }
+  } catch {}
+}
+
+async function searchTariff() {
+  const query = document.getElementById('tariff-query').value.trim();
+  const type = document.getElementById('tariff-type').value;
+  if (!query) return;
+
+  document.getElementById('tariff-results').innerHTML = 'Searching...';
+
+  let url;
+  if (type === 'hsn') url = `/api/v1/tax/tariff-lookup?hsn=${encodeURIComponent(query)}`;
+  else if (type === 'chapter') url = `/api/v1/tax/tariff-lookup?chapter=${encodeURIComponent(query)}`;
+  else url = `/api/v1/tax/tariff-lookup?search=${encodeURIComponent(query)}`;
+
+  try {
+    const { status, data } = await api('GET', url);
+    if (status === 403) {
+      document.getElementById('tariff-results').innerHTML =
+        '<p style="color:var(--danger);">Tariff lookup requires Professional or Enterprise plan.</p>';
+      return;
+    }
+    if (data.results && data.results.length > 0) {
+      const rows = data.results.slice(0, 50).map(r => `
+        <tr>
+          <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-weight:600;color:var(--primary);">${escHtml(r.tariff_item || '')}</code></td>
+          <td style="max-width:300px;">${escHtml((r.description || '').substring(0, 100))}${(r.description || '').length > 100 ? '...' : ''}</td>
+          <td style="text-align:center;">${escHtml(r.unit || '-')}</td>
+          <td style="text-align:right;font-weight:500;">${escHtml(r.basic_rate || '-')}</td>
+          <td style="text-align:right;font-weight:600;color:var(--primary);">${escHtml(r.effective_rate || '-')}</td>
+          <td style="text-align:right;">${escHtml(r.igst || '-')}</td>
+          <td style="text-align:right;font-weight:600;">${escHtml(r.total_rate || '-')}</td>
+          <td><span style="font-size:11px;padding:2px 6px;border-radius:4px;background:${(r.import_policy||'').toLowerCase()==='free'?'#dcfce7':'#fef3c7'};color:${(r.import_policy||'').toLowerCase()==='free'?'#16a34a':'#d97706'};">${escHtml(r.import_policy || '-')}</span></td>
+        </tr>
+      `).join('');
+      document.getElementById('tariff-results').innerHTML =
+        `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <p style="font-size:13px;color:var(--text-muted);">Showing top 50 of <strong>${data.count}</strong> results</p>
+          <span style="background:var(--primary-light);color:var(--primary);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">${data.count} matches</span>
+        </div>
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+        <table><thead><tr><th>HSN Code</th><th>Description</th><th>Unit</th><th>BCD %</th><th>Effective %</th><th>IGST %</th><th>Total %</th><th>Policy</th></tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+    } else {
+      document.getElementById('tariff-results').textContent = 'No results found.';
+    }
+  } catch { document.getElementById('tariff-results').textContent = 'Error searching tariff data.'; }
+}
+
+// --- SUBSCRIPTION ---
+async function loadSubscription() {
+  try {
+    const [{ data: sub }, { data: plans }, { data: usage }] = await Promise.all([
+      api('GET', '/api/v1/subscription'),
+      api('GET', '/api/v1/subscription/plans'),
+      api('GET', '/api/v1/subscription/usage'),
+    ]);
+
+    document.getElementById('sub-current').innerHTML = `
+      <p><strong>Plan:</strong> ${(sub.tier || currentUser?.tier || 'free').toUpperCase()}</p>
+      <p><strong>Status:</strong> Active</p>
+    `;
+
+    if (plans.plans) {
+      const planCards = Object.entries(plans.plans).map(([key, p]) => `
+        <div style="display:inline-block;width:280px;vertical-align:top;border:1px solid var(--border);border-radius:10px;padding:20px;margin-right:16px;margin-bottom:16px;">
+          <h3 style="margin-bottom:8px;">${key.toUpperCase()}</h3>
+          <p style="font-size:24px;font-weight:700;color:var(--primary);">Rs. ${(p.pricing?.monthly || 0).toLocaleString()}<span style="font-size:13px;font-weight:400;color:var(--text-muted);">/mo</span></p>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">Rs. ${(p.pricing?.annual || 0).toLocaleString()}/year</p>
+          <hr style="margin:12px 0;border:0;border-top:1px solid var(--border);">
+          <ul style="font-size:13px;list-style:none;padding:0;">
+            <li>&#10003; ${p.limits?.queriesPerDay === -1 ? 'Unlimited' : p.limits?.queriesPerDay} queries/day</li>
+            <li>&#10003; ${p.limits?.documentsPerDay === -1 ? 'Unlimited' : p.limits?.documentsPerDay} docs/day</li>
+            ${(p.limits?.features || []).map(f => '<li>&#10003; ' + f + '</li>').join('')}
+          </ul>
+          ${key !== (currentUser?.tier || 'free') ? '<button class="btn btn-outline btn-sm" style="margin-top:12px;">Upgrade</button>' : '<span style="color:var(--success);font-size:13px;font-weight:600;">Current Plan</span>'}
+        </div>
+      `).join('');
+      document.getElementById('sub-plans').innerHTML = planCards;
+    }
+
+    if (usage) {
+      document.getElementById('sub-usage').innerHTML = `
+        <p><strong>Queries:</strong> ${usage.queries?.used || 0} / ${usage.queries?.limit === -1 ? 'Unlimited' : usage.queries?.limit || 10}</p>
+        <p><strong>Documents:</strong> ${usage.documents?.used || 0} / ${usage.documents?.limit === -1 ? 'Unlimited' : usage.documents?.limit || 0}</p>
+      `;
+    }
+  } catch { document.getElementById('sub-current').textContent = 'Error loading subscription info.'; }
+}
+
+// --- PLUGINS ---
+async function loadPlugins() {
+  try {
+    const { data } = await api('GET', '/api/v1/plugins');
+    if (data.plugins && data.plugins.length > 0) {
+      const cards = data.plugins.map(p => `
+        <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <strong>${escHtml(p.name)}</strong> <span style="color:var(--text-muted);font-size:12px;">v${p.version}</span>
+              <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">${escHtml(p.description)}</p>
+              <p style="font-size:12px;margin-top:6px;">
+                Domains: ${(p.domains || []).map(d => '<span class="badge badge-low">' + d + '</span>').join(' ')}
+              </p>
+            </div>
+            <span class="badge badge-upcoming">${p.status || 'Active'}</span>
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('plugins-list').innerHTML = cards;
+    } else {
+      document.getElementById('plugins-list').textContent = 'No plugins installed.';
+    }
+  } catch { document.getElementById('plugins-list').textContent = 'Error loading plugins.'; }
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function askSuggestion(query) {
+  document.getElementById('chat-input').value = query;
+  sendChat();
+  document.getElementById('chat-suggestions').style.display = 'none';
+}
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = escHtml(text);
+  // Tables: | Header | Header |
+  html = html.replace(/^(\|.+\|)\n(\|[\s\-:|]+\|)\n((?:\|.+\|\n?)+)/gm, function(match, header, sep, body) {
+    const ths = header.split('|').filter(c => c.trim()).map(c => '<th style="padding:6px 10px;background:#f1f5f9;font-size:12px;">' + c.trim() + '</th>').join('');
+    const rows = body.trim().split('\n').map(row => {
+      const tds = row.split('|').filter(c => c.trim()).map(c => '<td style="padding:5px 10px;font-size:12px;border-bottom:1px solid #e2e8f0;">' + c.trim() + '</td>').join('');
+      return '<tr>' + tds + '</tr>';
+    }).join('');
+    return '<table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;"><thead><tr>' + ths + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  });
+  // Bold: **text**
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Bullet list: - item
+  html = html.replace(/^- (.+)$/gm, '<li style="margin-left:16px;font-size:13px;">$1</li>');
+  // Numbered list: 1. item
+  html = html.replace(/^\d+\.\s+(.+)$/gm, '<li style="margin-left:16px;font-size:13px;">$1</li>');
+  // Headers
+  html = html.replace(/^### (.+)$/gm, '<h4 style="font-size:14px;margin:8px 0 4px;color:#1e293b;">$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3 style="font-size:15px;margin:10px 0 4px;color:#1e293b;">$1</h3>');
+  // Separator
+  html = html.replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #e2e8f0;margin:8px 0;">');
+  // Line breaks
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+// --- INIT ---
+if (token) { enterApp(); }
+</script>
+</body>
+</html>

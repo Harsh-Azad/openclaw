@@ -1,0 +1,36 @@
+{
+  "agent": {
+    "model": "anthropic/claude-opus-4-6",
+    "name": "Jarvis",
+    "description": "Personal AI Tax & Compliance Assistant"
+  },
+  "gateway": {
+    "port": 18789,
+    "bind": "loopback"
+  },
+  "channels": {
+    "webchat": {
+      "enabled": true
+    }
+  },
+  "skills": {
+    "managed": [
+      "tax-chat",
+      "doc-analyzer",
+      "compliance-calendar",
+      "customs-tariff"
+    ]
+  },
+  "jarvis": {
+    "cloud": {
+      "url": "http://localhost:3001",
+      "enabled": true
+    },
+    "features": {
+      "taxChat": true,
+      "docAnalyzer": true,
+      "complianceCalendar": true,
+      "customsTariff": true
+    }
+  }
+}

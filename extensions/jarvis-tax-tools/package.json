@@ -1,0 +1,14 @@
+{
+  "name": "@jarvis-tax/openclaw-tools",
+  "version": "1.0.0",
+  "description": "OpenClaw plugin providing Jarvis tax-domain tools (tax chat, compliance calendar, tariff lookup, document analysis)",
+  "type": "module",
+  "main": "index.js",
+  "openclaw": {
+    "extensions": {
+      "tools": ["jarvis_tax_chat", "jarvis_compliance", "jarvis_tariff", "jarvis_doc_analyze", "jarvis_usage", "jarvis_rag_search"]
+    }
+  },
+  "keywords": ["openclaw", "plugin", "tax", "india", "gst", "customs"],
+  "license": "AGPL-3.0"
+}

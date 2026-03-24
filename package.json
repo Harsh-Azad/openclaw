@@ -1,20 +1,20 @@
 {
-  "name": "openclaw",
-  "version": "2026.3.23",
-  "description": "Multi-channel AI gateway with extensible messaging integrations",
-  "keywords": [],
-  "homepage": "https://github.com/openclaw/openclaw#readme",
+  "name": "jarvis-tax-assistant",
+  "version": "1.0.0",
+  "description": "Jarvis - Personal AI Tax & Compliance Assistant for CAs, Lawyers and Tax Professionals",
+  "keywords": ["tax", "compliance", "GST", "income-tax", "customs", "AI", "assistant"],
+  "homepage": "https://github.com/jarvis-tax/jarvis#readme",
   "bugs": {
-    "url": "https://github.com/openclaw/openclaw/issues"
+    "url": "https://github.com/jarvis-tax/jarvis/issues"
   },
   "license": "MIT",
   "author": "",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openclaw/openclaw.git"
+    "url": "git+https://github.com/jarvis-tax/jarvis.git"
   },
   "bin": {
-    "openclaw": "openclaw.mjs"
+    "jarvis": "jarvis.mjs"
   },
   "directories": {
     "doc": "docs",

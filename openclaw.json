@@ -1,0 +1,130 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/jarvis-workspace",
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-6",
+        "fallbacks": ["openai/gpt-4o"]
+      },
+      "models": {
+        "anthropic/claude-sonnet-4-6": { "alias": "Sonnet" },
+        "anthropic/claude-opus-4-6": { "alias": "Opus" },
+        "openai/gpt-4o": { "alias": "GPT-4o" }
+      },
+      "heartbeat": {
+        "every": "30m",
+        "target": "last"
+      },
+      "imageMaxDimensionPx": 1200
+    },
+    "list": [
+      {
+        "id": "jarvis",
+        "default": true,
+        "workspace": "~/.openclaw/jarvis-workspace",
+        "groupChat": {
+          "mentionPatterns": ["@jarvis", "jarvis"]
+        }
+      }
+    ]
+  },
+
+  "channels": {
+    "whatsapp": {
+      "enabled": false,
+      "dmPolicy": "pairing",
+      "allowFrom": [],
+      "groups": {
+        "*": { "requireMention": true }
+      }
+    },
+    "telegram": {
+      "enabled": false,
+      "dmPolicy": "pairing"
+    },
+    "slack": {
+      "enabled": false
+    },
+    "discord": {
+      "enabled": false
+    }
+  },
+
+  "tools": {
+    "profile": "full",
+    "allow": [
+      "group:fs",
+      "group:runtime",
+      "group:web",
+      "group:ui",
+      "group:messaging",
+      "group:sessions",
+      "group:memory",
+      "group:automation",
+      "jarvis_tax_chat",
+      "jarvis_compliance",
+      "jarvis_tariff",
+      "jarvis_doc_analyze"
+    ]
+  },
+
+  "skills": {
+    "entries": {
+      "tax-chat": { "enabled": true },
+      "doc-analyzer": { "enabled": true },
+      "compliance-calendar": { "enabled": true },
+      "customs-tariff": { "enabled": true },
+      "jarvis-bridge": { "enabled": true }
+    },
+    "load": {
+      "watch": true,
+      "watchDebounceMs": 250
+    }
+  },
+
+  "session": {
+    "dmScope": "per-channel-peer",
+    "reset": {
+      "mode": "daily",
+      "atHour": 4,
+      "idleMinutes": 120
+    }
+  },
+
+  "cron": {
+    "enabled": true,
+    "maxConcurrentRuns": 2,
+    "sessionRetention": "24h"
+  },
+
+  "hooks": {
+    "enabled": true,
+    "path": "/hooks",
+    "defaultSessionKey": "hook:jarvis",
+    "mappings": [
+      {
+        "match": { "path": "tax-notification" },
+        "action": "agent",
+        "agentId": "jarvis",
+        "deliver": true
+      },
+      {
+        "match": { "path": "compliance-alert" },
+        "action": "agent",
+        "agentId": "jarvis",
+        "deliver": true
+      }
+    ]
+  },
+
+  "gateway": {
+    "port": 18789,
+    "bind": "loopback",
+    "reload": { "mode": "hybrid", "debounceMs": 300 }
+  },
+
+  "identity": {
+    "name": "Jarvis",
+    "tagline": "AI Tax & Compliance Assistant"
+  }
+}
